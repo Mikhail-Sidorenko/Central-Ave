@@ -7,7 +7,7 @@
 <style>
 :root{
   --bg:#f6f5f1; --paper:#ffffff; --ink:#1d1d1b; --muted:#6b6a65; --line:#dcd9d0; --wall:#2b2a27;
-  --ac:#0e7c9a; --rad:#d23a2a; --tp:#e8892b; --light:#b8860b; --sewer:#8a5a2b; --vent:#2f8f4e; --sel:#2453d6;
+  --ac:#0e7c9a; --rad:#d23a2a; --tp:#e8892b; --light:#b8860b; --sewer:#8a5a2b; --vent:#2f8f4e; --sock:#7a4fb0; --sel:#2453d6;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -108,7 +108,7 @@ g.dev{cursor:pointer}
 <body>
 <div class="app">
 <header>
-  <div><h1>Дом 88-96 — инженерные системы</h1><div class="sub">Интерактивный план по проекту ООО «Движущая сила» · оси 13,90 × 16,13 м</div></div>
+  <div><h1>Дом 88-96 — инженерные системы</h1><div class="sub">Инженерные системы и отделка · дизайн-проект RUDA studio + проект 88-96</div></div>
   <div class="tabs" id="tabs"></div>
 </header>
 <aside class="left">
@@ -137,19 +137,21 @@ g.dev{cursor:pointer}
 __DATA__
 const SCANS = __SCANS__;
 const SYS = {
+  fin:   { name: "Отделка (полы)", c: "#a88b5c" },
   ac:    { name: "Кондиционеры", c: "var(--ac)" },
-  rad:   { name: "Радиаторы и котёл", c: "var(--rad)" },
+  rad:   { name: "Отопление", c: "var(--rad)" },
   tp:    { name: "Тёплый пол", c: "var(--tp)" },
-  light: { name: "Освещение и шторы", c: "var(--light)" },
-  sewer: { name: "Канализация", c: "var(--sewer)" },
+  light: { name: "Освещение", c: "var(--light)" },
+  sock:  { name: "Розетки и выключатели", c: "var(--sock)" },
+  sewer: { name: "Сантехника и канализация", c: "var(--sewer)" },
   vent:  { name: "Вентиляция", c: "var(--vent)" }
 };
 const ST = { project: ["b-project", "проект"], decided: ["b-decided", "решено"], prelim: ["b-prelim", "предв."] };
 const badge = s => s ? `<span class="badge ${ST[s][0]}">${ST[s][1]}</span>` : "";
 let floor = 1, selRoom = null;
-const on = { ac: true, rad: true, tp: true, light: true, sewer: true, vent: true };
-try { const s = JSON.parse(localStorage.getItem("dom8896") || "{}"); if (s.floor) floor = s.floor; if (s.on) Object.assign(on, s.on); } catch (e) {}
-const save = () => { try { localStorage.setItem("dom8896", JSON.stringify({ floor, on })); } catch (e) {} };
+const on = { fin: false, ac: true, rad: true, tp: true, light: true, sock: false, sewer: true, vent: true };
+try { const s = JSON.parse(localStorage.getItem("dom8896v2") || "{}"); if (s.floor) floor = s.floor; if (s.on) Object.assign(on, s.on); } catch (e) {}
+const save = () => { try { localStorage.setItem("dom8896v2", JSON.stringify({ floor, on })); } catch (e) {} };
 
 const NS = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("plan");
@@ -224,7 +226,7 @@ function render() {
   el("path", { d: "M0,0 L10,5 L0,10 z", fill: "context-stroke" }, mk);
 
   G = {};
-  ["scan", "axes", "rooms", "tp", "struct", "sewer", "vent", "rad", "ac", "light", "rlab"].forEach(k => G[k] = el("g", { id: "g-" + k }, svg));
+  ["scan", "axes", "rooms", "fin", "tp", "struct", "sewer", "vent", "rad", "ac", "light", "sock", "rlab"].forEach(k => G[k] = el("g", { id: "g-" + k }, svg));
   // scan
   el("image", { href: SCANS[floor], x: -2500, y: -2500, width: 19000, height: 21000, preserveAspectRatio: "none" }, G.scan);
   // axes
@@ -244,6 +246,8 @@ function render() {
     p.dataset.id = r.id;
     if (r.kind !== "stair") p.addEventListener("click", () => { if (moved < 6) selectRoom(r.id); });
     const g = el("g", { class: "rlab" }, G.rlab); const [x, y] = r.lab;
+    if (r.area && r.area < 8.5 && r.kind !== "out") { const t1 = el("text", { x, y, class: "nm", "text-anchor": "middle" }, g); t1.textContent = (r.n ? r.n + ". " : "") + r.name; t1.style.fontSize = "190px"; t1.style.fontWeight = "600";
+      const t3 = el("text", { x, y: y + 230, class: "ar", "text-anchor": "middle" }, g); t3.textContent = r.area.toFixed(2).replace(".", ",") + " м²"; t3.style.fontSize = "170px"; return; }
     if (r.n) { el("circle", { cx: x, cy: y - 420, r: 270, fill: "#fff", stroke: "#3c3b37", "stroke-width": 18 }, g); const t = el("text", { x, y: y - 410, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 270, "font-weight": 600, fill: "#1d1d1b" }, g); t.textContent = r.n; }
     el("text", { x, y: y + 60, class: "nm", "text-anchor": "middle" }, g).textContent = r.name;
     if (r.area) el("text", { x, y: y + 380, class: "ar", "text-anchor": "middle" }, g).textContent = r.area.toFixed(2).replace(".", ",") + " м²";
@@ -253,9 +257,10 @@ function render() {
   W.ext.forEach(([x0, y0, x1, y1]) => el("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0, class: "wall-e" }, G.struct));
   W.int.forEach(([x0, y0, x1, y1]) => el("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0, class: "wall-i" }, G.struct));
   if (W.stair) { const [a, , c] = W.stair; const n = 9; for (let i = 0; i <= n; i++) { const x = a[0] + (c[0] - a[0]) * i / n; el("line", { x1: x, y1: a[1], x2: x, y2: c[1], stroke: "#a9a598", "stroke-width": 15 }, G.struct); } el("polygon", { points: pts(W.stair), fill: "none", stroke: "#8a877d", "stroke-width": 20 }, G.struct); }
-  (DOORS[floor] || []).forEach(([x, y, w, o]) => {
+  (DOORS[floor] || []).forEach(([x, y, w, o, mk, info]) => {
     if (o === "h") el("rect", { x: x - w / 2, y: y - 260, width: w, height: 520, class: "door" }, G.struct);
     else el("rect", { x: x - 260, y: y - w / 2, width: 520, height: w, class: "door" }, G.struct);
+    if (mk) { const t2 = el("text", { x: o === "h" ? x : x + 380, y: o === "h" ? y - 380 : y, class: "winlab dl", "text-anchor": o === "h" ? "middle" : "start", "dominant-baseline": "central" }, G.struct); t2.textContent = mk; if (info) { el("title", {}, t2).textContent = info; } }
   });
   (WINDOWS[floor] || []).forEach(([x, y, l, o, lab]) => {
     if (floor === 3) { el("rect", { x: x - 300, y: y - l / 2, width: 600, height: l, fill: "#e7f0f6", stroke: "#7aa6c2", "stroke-width": 30 }, G.struct); el("text", { x: x + 420, y, class: "winlab", "dominant-baseline": "central" }, G.struct).textContent = lab; return; }
@@ -263,7 +268,7 @@ function render() {
     else el("line", { x1: x, y1: y - l / 2, x2: x, y2: y + l / 2, class: "win" }, G.struct);
   });
 
-  drawTP(); drawRad(); drawAC(); drawLight(); drawSewer(); drawVent();
+  drawFin(); drawTP(); drawRad(); drawAC(); drawLight(); drawSock(); drawSewer(); drawVent();
   applyLayers(); panel();
 }
 function devG(layer, d, title) {
@@ -281,13 +286,18 @@ function line(parent, p, color, w, dashed, arrow) {
 function label(parent, x, y, txt, color, anchor = "start") { const t = el("text", { x, y, class: "devlab", fill: color, "text-anchor": anchor, "dominant-baseline": "central" }, parent); t.textContent = txt; t.classList.add("dl"); return t; }
 
 function drawTP() {
-  TP.filter(z => z.f === floor).forEach(z => z.rooms.forEach(rid => {
-    const r = roomById(rid); const g = devG("tp", { room: rid }, z.id + " (предварительно)");
-    el("polygon", { points: pts(r.poly), fill: "url(#tph)", stroke: "var(--tp)", "stroke-width": 40, "stroke-dasharray": "160 110", transform: "", style: "pointer-events:visiblePainted" }, g);
-    const [x, y] = r.lab; const tx = x - 0, ty = y - 950;
-    el("rect", { x: tx - 420, y: ty - 170, width: 840, height: 340, rx: 120, fill: "#fff", stroke: "var(--tp)", "stroke-width": 30 }, g);
-    el("text", { x: tx, y: ty, fill: "var(--tp)" }, g).textContent = z.id;
-  }));
+  TP.filter(z => z.f === floor).forEach(z => {
+    const g = devG("tp", { room: z.room }, z.id + ": " + z.info);
+    el("polygon", { points: pts(z.poly), fill: "url(#tph)", stroke: "var(--tp)", "stroke-width": 40, style: "pointer-events:visiblePainted" }, g);
+    const [x, y] = centroid(z.poly);
+    el("rect", { x: x - 420, y: y - 170, width: 840, height: 340, rx: 120, fill: "#fff", stroke: "var(--tp)", "stroke-width": 30 }, g);
+    el("text", { x, y, fill: "var(--tp)" }, g).textContent = z.id;
+  });
+  DEV.filter(d => d.f === floor && d.sys === "tp").forEach(d => {
+    const g = devG("tp", d, d.model);
+    el("rect", { x: d.x - 170, y: d.y - 170, width: 340, height: 340, rx: 50, fill: "#fff", stroke: "var(--tp)", "stroke-width": 35 }, g);
+    el("text", { x: d.x, y: d.y, fill: "var(--tp)" }, g).textContent = "Т";
+  });
 }
 function drawRad() {
   DEV.filter(d => d.f === floor && d.sys === "rad").forEach(d => {
@@ -327,14 +337,40 @@ function drawAC() {
   });
 }
 function drawLight() {
-  DEV.filter(d => d.f === floor && d.sys === "light").forEach(d => {
-    const g = devG("light", d, d.lab + " — условно"); const c = "var(--light)";
-    el("circle", { cx: d.x, cy: d.y, r: 170, fill: "#fff6da", stroke: c, "stroke-width": 30, "stroke-dasharray": "70 45" }, g);
-    el("line", { x1: d.x - 120, y1: d.y - 120, x2: d.x + 120, y2: d.y + 120, stroke: c, "stroke-width": 25 }, g);
-    el("line", { x1: d.x - 120, y1: d.y + 120, x2: d.x + 120, y2: d.y - 120, stroke: c, "stroke-width": 25 }, g);
-    label(g, d.x + 250, d.y, d.lab, c);
+  const c = "var(--light)";
+  LIGHTS.filter(l => l.f === floor).forEach(l => {
+    const g = devG("light", { room: l.room }, (l.line ? l.line + ": " : "") + l.model);
+    if (l.k === "track" || l.k === "led") {
+      line(g, l.pts, c, l.k === "track" ? 70 : 40, l.k === "led");
+      if (l.k === "track") l.pts.forEach(p => el("circle", { cx: p[0], cy: p[1], r: 70, fill: c }, g));
+    } else l.pts.forEach(([x, y]) => {
+      if (l.k === "spot") { el("circle", { cx: x, cy: y, r: 110, fill: "#fff6da", stroke: c, "stroke-width": 35 }, g); el("circle", { cx: x, cy: y, r: 40, fill: c }, g); }
+      else if (l.k === "chand") { el("circle", { cx: x, cy: y, r: 300, fill: "#fff6da", stroke: c, "stroke-width": 40 }, g); for (let a = 0; a < 6; a++) { const r = 300, an = a * Math.PI / 3; el("line", { x1: x, y1: y, x2: x + r * Math.cos(an), y2: y + r * Math.sin(an), stroke: c, "stroke-width": 25 }, g); } }
+      else if (l.k === "pend") { el("circle", { cx: x, cy: y, r: 180, fill: "#fff6da", stroke: c, "stroke-width": 35 }, g); el("line", { x1: x - 130, y1: y - 130, x2: x + 130, y2: y + 130, stroke: c, "stroke-width": 25 }, g); el("line", { x1: x - 130, y1: y + 130, x2: x + 130, y2: y - 130, stroke: c, "stroke-width": 25 }, g); }
+      else if (l.k === "wall") { el("path", { d: `M${x - 160},${y + 120} L${x},${y - 140} L${x + 160},${y + 120} Z`, fill: "#fff6da", stroke: c, "stroke-width": 30 }, g); }
+      else if (l.k === "floor") { el("circle", { cx: x, cy: y, r: 160, fill: "#fff", stroke: c, "stroke-width": 30 }, g); el("circle", { cx: x, cy: y, r: 60, fill: c }, g); }
+    });
+    if (l.line) { const p = l.pts[0]; label(g, p[0] + 170, p[1] - 200, l.line.replace("Линия ", "Л"), c); }
   });
 }
+function drawSock() {
+  ROOMS.filter(r => r.f === floor && r.sock).forEach(r => {
+    const n = sockCount(r), s = swCount(r); const [x, y] = r.lab; const g = devG("sock", { room: r.id }, r.sock.join("; "));
+    const tx = x, ty = y + 820;
+    el("rect", { x: tx - 620, y: ty - 170, width: 1240, height: 340, rx: 120, fill: "#fff", stroke: "var(--sock)", "stroke-width": 30 }, g);
+    el("text", { x: tx, y: ty, fill: "var(--sock)" }, g).textContent = `⏚${n} · ⏻${s}`;
+  });
+}
+function drawFin() {
+  ROOMS.filter(r => r.f === floor && r.fl && r.fl !== "Ф0").forEach(r => {
+    const g = devG("fin", { room: r.id }, FLOORTYPES[r.fl].name);
+    el("polygon", { points: pts(r.poly), fill: FLOORTYPES[r.fl].c, "fill-opacity": .75, stroke: "none" }, g);
+    const [x, y] = r.lab; el("text", { x: x, y: y - 900, fill: "#7a6a52" }, g).textContent = r.fl;
+  });
+}
+const num = s => { const m = s.match(/—\s*(\d+)/); return m ? +m[1] : 0; };
+function sockCount(r) { return (r.sock || []).filter(s => /^Розетка/.test(s)).reduce((a, s) => a + num(s), 0); }
+function swCount(r) { return (r.sock || []).filter(s => /^Выключатель/.test(s)).reduce((a, s) => a + num(s), 0); }
 function drawSewer() {
   const c = "var(--sewer)";
   SEWER.pipes.filter(p => p.f === floor).forEach(p => { const g = devG("sewer", {}, "Разводка — предварительно"); line(g, p.pts, c, p.d >= 110 ? 70 : 45, true); });
@@ -369,6 +405,9 @@ function applyLayers() {
 }
 function countSys(k, f) {
   if (k === "tp") return TP.filter(z => z.f === f).length;
+  if (k === "light") return LIGHTS.filter(l => l.f === f).reduce((a, l) => a + (l.k === "track" || l.k === "led" ? 1 : l.pts.length), 0);
+  if (k === "sock") return ROOMS.filter(r => r.f === f).reduce((a, r) => a + sockCount(r), 0);
+  if (k === "fin") return ROOMS.filter(r => r.f === f && r.fl && r.fl !== "Ф0").length;
   if (k === "sewer") return SEWER.fix.filter(x => x.f === f).length + SEWER.stacks.filter(s => s.floors.includes(f)).length;
   if (k === "vent") return VENT.blocks.filter(b => b.floors.includes(f)).length + VENT.grills.filter(x => x.f === f).length;
   return DEV.filter(d => d.f === f && d.sys === k && d.t !== "outdoor").length + DEV.filter(d => d.f === f && d.sys === k && d.t === "outdoor").length;
@@ -382,25 +421,42 @@ function panel() {
   if (!selRoom) return overview();
   const r = roomById(selRoom), f = FLOORS.find(x => x.id === r.f);
   const devs = DEV.filter(d => d.room === r.id);
+  const src = r.src === "АР" ? "проект 88-96" : (r.f === 1 ? "дизайн-проект 1 эт." : "дизайн-проект 2 эт.");
   let h = `<div class="card"><button class="close" onclick="selRoom=null;selectRoom(null)">✕</button>
-    <h3>${r.n ? r.n + ". " : ""}${r.name}</h3><div class="meta">${f.name}${r.area ? " · " + r.area.toFixed(2).replace(".", ",") + " м²" : ""}</div>`;
+    <h3>${r.n ? r.n + ". " : ""}${r.name}</h3><div class="meta">${f.name}${r.area ? " · " + r.area.toFixed(2).replace(".", ",") + " м²" : ""} · ${src}</div>`;
   h += `<div class="kv"><b>Площадь</b><span>${r.area ? r.area.toFixed(2).replace(".", ",") + " м² " + badge("project") : "—"}</span>`;
-  const lg = devs.find(d => d.sys === "light"); h += `<b>Группа щита</b><span>${lg ? lg.lab + " " + badge("prelim") : "—"}</span>`;
-  const tz = TP.find(z => z.rooms.includes(r.id)); const rads = devs.filter(d => d.sys === "rad" && d.t === "radiator");
-  h += `<b>Зона отопления</b><span>${[tz ? "тёплый пол " + tz.id : "", rads.length ? "радиатор " + rads.map(d => d.lab).join(", ") : ""].filter(Boolean).join(" · ") || "—"}${tz || rads.length ? " " + badge("prelim") : ""}</span>`;
-  if (r.acRef) h += `<b>В спецификации</b><span>${r.acRef}</span>`;
+  const ls = LIGHTS.filter(l => l.room === r.id);
+  const lines = [...new Set(ls.map(l => l.line).filter(Boolean))];
+  h += `<b>Линии света</b><span>${lines.length ? lines.join(", ") + " " + badge("project") : "—"}</span>`;
+  h += `<b>Группа щита</b><span>не назначена ${badge("prelim")}</span>`;
+  const tz = TP.filter(z => z.room === r.id); const rads = devs.filter(d => d.sys === "rad" && d.t === "radiator");
+  h += `<b>Отопление</b><span>${[tz.length ? "тёплый пол " + tz.map(z => z.id).join(", ") : "", rads.length ? rads.length + " прибор(а)" : ""].filter(Boolean).join(" · ") || "—"}</span>`;
+  if (r.acRef) h += `<b>Спец. кондиц.</b><span>${r.acRef}</span>`;
   h += `</div>`;
   if (r.note) h += `<div class="note">${r.note}</div>`;
+  // finishes
+  if (r.fl && r.fl !== "Ф0") {
+    const ft = FLOORTYPES[r.fl];
+    let fi = `<div class="item"><b>Пол (${r.fl}):</b> ${ft.name}${ft.note ? `<br><small>${ft.note}</small>` : ""} ${badge("project")}</div>`;
+    if (r.walls) fi += `<div class="item"><b>Стены:</b><ul class="open" style="margin:2px 0 0">${r.walls.map(w => `<li>${w}</li>`).join("")}</ul></div>`;
+    if (r.ceil) fi += `<div class="item"><b>Потолок:</b> ${r.ceil}</div>`;
+    h += sec("fin", fi);
+  }
+  if (r.eq) h += `<div class="sec" style="--c:#6b6a65"><div class="t"><span class="dot"></span>Мебель и оборудование</div><ul class="open" style="margin:2px 0 0 18px">${r.eq.map(w => `<li>${w}</li>`).join("")}</ul></div>`;
   // AC
   const ac = devs.filter(d => d.sys === "ac");
-  h += sec("ac", ac.length ? ac.map(d => `<div class="item">${d.t === "todo" ? "—" : d.lab} <small>${d.model}</small> ${badge(d.st)}${d.sysNo ? `<br><small>Система ${d.sysNo}, наружный блок ${d.out}: ${DEV.find(x => x.id === d.out).model}. Место установки ${d.stPlace === "prelim" ? "условное" : "по проекту"}.</small>` : ""}${d.info ? `<br><small>${d.info}</small>` : ""}</div>${d.warn ? `<div class="warn">${d.warn}</div>` : ""}`).join("") : `<div class="item empty">нет</div>`);
+  h += sec("ac", ac.length ? ac.map(d => `<div class="item">${d.t === "todo" ? "—" : d.lab} <small>${d.model}</small> ${badge(d.st)}${d.sysNo ? `<br><small>Система ${d.sysNo}, наружный блок ${d.out}: ${DEV.find(x => x.id === d.out).model}. Место установки ${d.stPlace === "prelim" ? "условное" : "по дизайн-проекту"}.</small>` : ""}${d.info ? `<br><small>${d.info}</small>` : ""}</div>${d.warn ? `<div class="warn">${d.warn}</div>` : ""}`).join("") : `<div class="item empty">нет</div>`);
   // heating
   let ht = "";
   devs.filter(d => d.sys === "rad").forEach(d => { ht += `<div class="item">${d.t === "boiler" ? "Котёл" : d.lab} <small>${d.model}</small> ${badge(d.st)}${d.info ? `<br><small>${d.info}</small>` : ""}</div>${d.warn ? `<div class="warn">${d.warn}</div>` : ""}`; });
-  if (tz) ht += `<div class="item">Тёплый пол — зона ${tz.id} ${badge("prelim")}<br><small>Регулировка по зоне, беспроводной термостат.</small></div>`;
   h += sec("rad", ht || `<div class="item empty">нет</div>`);
+  let tt = tz.map(z => `<div class="item">${z.id} <small>электрический, ${z.info}</small> ${badge("project")}</div>`).join("");
+  tt += DEV.filter(d => d.sys === "tp" && d.room === r.id).map(d => `<div class="item">${d.model} ${badge("project")}</div>`).join("");
+  h += sec("tp", tt || `<div class="item empty">нет</div>`);
   // light
-  h += sec("light", lg ? `<div class="item">${lg.lab} <small>${lg.model}</small> ${badge("prelim")}<br><small>${lg.info}</small></div>` : `<div class="item empty">нет</div>`);
+  h += sec("light", ls.length ? ls.map(l => `<div class="item">${l.line || "—"} <small>${l.model}${l.k === "track" || l.k === "led" ? "" : " · на плане: " + l.pts.length}</small></div>`).join("") : `<div class="item empty">нет</div>`);
+  // sockets
+  h += sec("sock", r.sock ? `<ul class="open" style="margin:2px 0 0 18px">${r.sock.map(s => `<li>${s}</li>`).join("")}</ul><div class="item"><small>Schneider Electric AtlasDesign, цвет карбон ${badge("project")}</small></div>` : `<div class="item empty">нет данных</div>`);
   // sewer
   const fx = SEWER.fix.filter(x => x.room === r.id);
   h += sec("sewer", fx.length ? fx.map(x => `<div class="item">${x.lab} <small>подключение Ø${x.d}</small> ${badge("prelim")}</div>`).join("") + `<div class="item"><small>Стояк Ст-К1 Ø110 в блоке ВК1 ${badge("project")}</small></div>` : `<div class="item empty">нет</div>`);
@@ -425,12 +481,13 @@ function showDev(d) {
 function overview() {
   const f = FLOORS.find(x => x.id === floor);
   const rooms = ROOMS.filter(r => r.f === floor && r.kind !== "stair");
-  let h = `<h2>${f.name} · отм. ${f.mark} · ${f.total}</h2><div class="empty">Нажмите на помещение, чтобы открыть карточку: площадь, оборудование, группа щита, зона отопления.</div>`;
-  h += `<h2>Помещения</h2><div style="display:grid;gap:2px">` + rooms.map(r => `<div class="layer" style="padding:5px 8px" onclick="selectRoom('${r.id}')"><span class="nm">${r.n}. ${r.name}</span><span class="cnt">${r.area.toFixed(2).replace(".", ",")}</span></div>`).join("") + `</div>`;
+  let h = `<h2>${f.name} · отм. ${f.mark} · ${f.total}</h2><div class="empty">${f.h ? f.h + ". " : ""}Нажмите на помещение, чтобы открыть карточку: площадь, отделка, оборудование, свет, розетки, отопление.</div>`;
+  h += `<h2>Помещения</h2><div style="display:grid;gap:2px">` + rooms.map(r => `<div class="layer" style="padding:5px 8px" onclick="selectRoom('${r.id}')"><span class="nm">${r.n ? r.n + ". " : ""}${r.name}</span><span class="cnt">${r.area ? r.area.toFixed(2).replace(".", ",") : ""}</span></div>`).join("") + `</div>`;
   const acs = DEV.filter(d => d.sys === "ac" && d.t === "outdoor");
   h += `<h2>Наружные блоки</h2>` + acs.map(d => `<div class="item" style="margin-left:0;cursor:pointer" onclick='showDev(DEV.find(x=>x.id==="${d.id}"))'><b style="color:var(--ac)">${d.lab}</b> ${d.model} ${badge(d.st)}</div>`).join("");
   h += `<h2>Не размещено и открытые вопросы</h2><ul class="open">` + OPEN.map(o => `<li><span class="dot" style="--c:${SYS[o.sys].c};display:inline-block;width:8px;height:8px;margin-right:6px"></span>${o.t}</li>`).join("") + `</ul>`;
-  h += `<div class="note">Источник геометрии — листы 3–5 и 16, 17.4–17.5 проекта 88-96 (сканы). Точность привязки около ±150 мм; включите «Скан чертежа», чтобы сверить. Оборудование кондиционирования — по вашей спецификации от 06.08.2026.</div>`;
+  if (floor < 3) { h += `<h2>Типы полов</h2>` + Object.entries(FLOORTYPES).filter(([k]) => k !== "Ф0").map(([k, v]) => `<div class="item" style="margin-left:0"><span style="display:inline-block;width:12px;height:12px;background:${v.c};border:1px solid #c9c4b6;vertical-align:-1px"></span> <b>${k}</b> ${v.name}</div>`).join(""); h += `<div class="note">${LIGHT_NOTE[floor]}</div>`; }
+  h += `<div class="note">Планировка, отделка, свет, розетки, тёплый пол, сантехника — дизайн-проекты RUDA studio (1 эт. 05-23, 2 эт. 07-23). Конструктив, вентблоки, стояк, гараж, терраса, чердак — проект 88-96. Кондиционеры — ваша спецификация от 06.08.2026. Точность привязки ±150 мм; «Скан чертежа» — подложка из дизайн-проекта.</div>`;
   panelEl.innerHTML = h;
 }
 function pointIn([x, y], p) { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
