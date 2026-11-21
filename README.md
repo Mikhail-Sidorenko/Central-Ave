@@ -32,3 +32,12 @@
 - Детская девочки (23,24 м²): в спецификации кондиционеров 16 м² и AS25 — проверить мощность.
 - Радиаторы в детских и гардеробе девочки в дизайн-проекте не обозначены.
 - Щит Wiren Board, 12 групп уличного освещения, 3 шторы — места не заданы.
+
+## Чертёж DXF (для AutoCAD / nanoCAD)
+`cad/dom-central-ave.dxf` — три этажа в пространстве модели (1 этаж, 2 этаж, чердак рядом, сдвиг 24 м), единицы — мм, каждая система на своём слое (`А-…` архитектура, `ОТД-ПОЛЫ`, `ОВ-…` кондиционеры/отопление/тёплый пол, `ЭО-…` свет, `ЭМ-РОЗЕТКИ`, `ВК-…` канализация, `ВЕНТ…`).
+Чтобы получить DWG: открыть DXF в AutoCAD / nanoCAD и «Сохранить как → DWG», либо бесплатный ODA File Converter.
+Пересборка после правок `src/data.js`:
+```
+node -e 'const fs=require("fs");fs.writeFileSync("/tmp/plan.json",eval(fs.readFileSync("src/data.js","utf8")+";JSON.stringify({AXES,FLOORS,FLOORTYPES,ROOMS,WALLS,ATTIC_OUTLINE,ROOF_EAVE,WINDOWS,DOORS,DEV,TP,LIGHTS,SEWER,VENT})"))'
+pip install ezdxf && python3 cad/make_dxf.py /tmp/plan.json
+```
